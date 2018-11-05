@@ -34,8 +34,6 @@ class App extends Component {
                     <div className="col">
                         <Yasqe ref={this.yasqe}/>
                         <div className="text-right">
-                            <button className="btn btn-secondary mr-1 mt-1 mb-1" onClick={this.openModal}>Suggest
-                            </button>
                             <button className="btn btn-primary mt-1 mb-1" onClick={this.onRunClick}>Run</button>
                         </div>
                         <QueryResult ref={this.queryResult}/>
