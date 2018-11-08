@@ -48,7 +48,7 @@ const queryIndexCompleter = function (yasqe) {
     returnObj.get = function (token, callback) {
         console.log("GETTING")
         Ajax.get(
-            Constants.SERVER+"/whisper?query="+yasqe.getCompleteToken(),
+            Constants.SERVER+"/rest/suggest/suggest-tpc/",
         ).then((data) => {
             callback(data.map(d => d.value));
         });

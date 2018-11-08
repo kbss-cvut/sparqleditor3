@@ -10,8 +10,8 @@ class RequestConfigBuilder {
     mAccept;
 
     constructor() {
-        this.mContentType = Constants.JSON_LD_MIME_TYPE;
-        this.mAccept = Constants.JSON_LD_MIME_TYPE;
+        this.mContentType = "application/json";
+        this.mAccept = "application/json";
     }
 
     content(value) {
@@ -66,7 +66,7 @@ export function accept(value) {
 export class Ajax {
 
     axiosInstance = axios.create({
-        baseURL: Constants.SERVER_URL
+        baseURL: Constants.SERVER
     });
 
     constructor() {
@@ -164,7 +164,7 @@ function mockRestApi(axiosInst) {
     const mock = new MockAdapter(axiosInst, {delayResponse: 500});
     const header = {};
     // Mock current user data
-    mock.onGet(/\/whisper/).reply(200, require('./rest-mock/exampleResponse.json'), header);
+    mock.onGet("/rest/suggest/suggest-tpc/").reply(200, require('./rest-mock/exampleResponse.json'), header);
 }
 
 const instance = new Ajax();
