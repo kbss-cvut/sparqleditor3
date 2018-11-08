@@ -164,7 +164,14 @@ function mockRestApi(axiosInst) {
     const mock = new MockAdapter(axiosInst, {delayResponse: 500});
     const header = {};
     // Mock current user data
-    mock.onGet("/rest/suggest/suggest-tpc/").reply(200, require('./rest-mock/exampleResponse.json'), header);
+
+    mock.onGet(/\/rest\/suggest\/suggest-tpc/).reply((config) => {
+        if (config.params.lastValidQuery && config.params.currentQuery && config.params.currentQueryCursor) {
+            return [200, require('./rest-mock/exampleResponse.json'), header]
+        } else {
+            return [404,[],header]
+        }
+    });
 }
 
 const instance = new Ajax();

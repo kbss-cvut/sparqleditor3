@@ -2,59 +2,9 @@ import React, {Component} from 'react';
 import YASQE from 'yasgui-yasqe';
 import './Yasqe.css';
 import Constants from './Constants';
-import Ajax from './ajax/Ajax';
+import Ajax, {params} from './ajax/Ajax';
 
 // autocompleter for the Query Index Web Service
-const queryIndexCompleter = function (yasqe) {
-    const tripleToPrefixed = (triple) => {
-        return triple.split(" ").map(token => iriToPrefixed(token) ).join(" ");
-    };
-
-    const iriToPrefixed = (token) => {
-        const queryPrefixes = yasqe.getPrefixesFromQuery();
-        const tokenCan = token.indexOf("<") > -1 ? token.substring(1,token.length-1) : token;
-
-        for(const prefix in queryPrefixes) {
-            const i = tokenCan.indexOf(queryPrefixes[prefix]);
-            if (i > -1) {
-                return prefix+":"+tokenCan.substring(i+queryPrefixes[prefix].length);
-            }
-        }
-        return token;
-    };
-
-    const returnObj = {
-        isValidCompletionPosition: function () {
-            var token = yasqe.getCompleteToken();
-            var cur = yasqe.getCursor();
-            var previousToken = yasqe.getPreviousNonWsToken(cur.line, token);
-            console.log(previousToken)
-            if (previousToken.type === null || previousToken.string === ".") {
-                return true;
-            } else {
-                return false;
-            }
-        },
-        preProcessToken: function (token) {
-            return token;
-        },
-        postProcessToken: function (token, suggestedString) {
-            return tripleToPrefixed( suggestedString );
-        }
-    };
-    returnObj.bulk = false;
-    returnObj.async = true;
-    returnObj.autoShow = false;
-    returnObj.get = function (token, callback) {
-        console.log("GETTING")
-        Ajax.get(
-            Constants.SERVER+"/rest/suggest/suggest-tpc/",
-        ).then((data) => {
-            callback(data.map(d => d.value));
-        });
-    };
-    return returnObj;
-};
 
 class Yasqe extends Component {
 
@@ -62,6 +12,9 @@ class Yasqe extends Component {
         super(props);
         console.log(JSON.stringify(props));
         this.yasqe = null;
+        this.state= {
+            lastParsableQuery:""
+        }
     }
 
     componentDidUpdate() {
@@ -75,6 +28,65 @@ class Yasqe extends Component {
             console.log("success", data);
         };
 
+        const localThis = this;
+
+        const queryIndexCompleter = function (yasqe) {
+            const tripleToPrefixed = (triple) => {
+                return triple.split(" ").map(token => iriToPrefixed(token) ).join(" ");
+            };
+
+            const iriToPrefixed = (token) => {
+                const queryPrefixes = yasqe.getPrefixesFromQuery();
+                const tokenCan = token.indexOf("<") > -1 ? token.substring(1,token.length-1) : token;
+
+                for(const prefix in queryPrefixes) {
+                    const i = tokenCan.indexOf(queryPrefixes[prefix]);
+                    if (i > -1) {
+                        return prefix+":"+tokenCan.substring(i+queryPrefixes[prefix].length);
+                    }
+                }
+                return token;
+            };
+
+            const returnObj = {
+                isValidCompletionPosition: function () {
+                    var token = yasqe.getCompleteToken();
+                    if (yasqe.queryValid) {
+                        localThis.setState({lastParsableQuery : yasqe.getValue()});
+                    }
+                    var cur = yasqe.getCursor();
+                    var previousToken = yasqe.getPreviousNonWsToken(cur.line, token);
+                    console.log(previousToken)
+                    // if (previousToken.type === null || previousToken.string === ".") {
+                    //     return true;
+                    // } else {
+                        return true;
+                    // }
+                },
+                preProcessToken: function (token) {
+                    return token;
+                },
+                postProcessToken: function (token, suggestedString) {
+                    return tripleToPrefixed( suggestedString );
+                }
+            };
+            const yq = yasqe;
+            returnObj.bulk = false;
+            returnObj.async = true;
+            returnObj.autoShow = false;
+            returnObj.get = function (token, callback) {
+                console.log("GETTING ")
+                Ajax.get(Constants.SERVER+"/rest/suggest/suggest-tpc",params({
+                        lastValidQuery:localThis.state.lastParsableQuery,
+                        currentQuery:yq.getValue(),
+                        currentQueryCursor:yq.getCursor()
+                })
+                ).then((data) => {
+                    callback(data.map(d => d.value));
+                });
+            };
+            return returnObj;
+        };
         YASQE.registerAutocompleter('queryIndexCompleter', queryIndexCompleter);
 
         //And, to make sure we don't use the other property and class autocompleters, overwrite the default enabled completers
