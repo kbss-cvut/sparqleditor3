@@ -172,6 +172,17 @@ function mockRestApi(axiosInst) {
             return [404,[],header]
         }
     });
+    mock.onGet(/\/rest\/suggest\/suggest-terms/).reply((config) => {
+        if (config.params.lastValidQuery && config.params.position=="subject") {
+            return [200, require('./rest-mock/exampleSubjectResponse.json'), header]
+        } else if (config.params.lastValidQuery && config.params.position=="predicate") {
+            return [200, require('./rest-mock/examplePredicateResponse.json'), header]
+        } else if (config.params.lastValidQuery && config.params.position=="object") {
+            return [200, require('./rest-mock/exampleObjectResponse.json'), header]
+        } else {
+            return [404,[],header]
+        }
+    });
 }
 
 const instance = new Ajax();

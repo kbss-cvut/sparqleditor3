@@ -13,7 +13,8 @@ class Yasqe extends Component {
         console.log(JSON.stringify(props));
         this.yasqe = null;
         this.state= {
-            lastParsableQuery:""
+            lastParsableQuery:"",
+            position: "",
         }
     }
 
@@ -48,26 +49,42 @@ class Yasqe extends Component {
                 return token;
             };
 
+            const prefixedToIri = (token) => {
+                const queryPrefixes = yasqe.getPrefixesFromQuery();
+                const prefixX = token.substring(0,token.indexOf(":"))
+                if ( token.indexOf(":") && queryPrefixes[prefixX]) {
+                    const localName = token.substring(token.indexOf(":") + 1, token.length)
+                    return queryPrefixes[prefixX] + localName;
+                } else {
+                    return token;
+                }
+            };
+
+            const type = "";
+
             const returnObj = {
                 isValidCompletionPosition: function () {
                     var token = yasqe.getCompleteToken();
+                    const state = {};
                     if (yasqe.queryValid) {
-                        localThis.setState({lastParsableQuery : yasqe.getValue()});
+                        state.lastParsableQuery = yasqe.getValue();
                     }
-                    var cur = yasqe.getCursor();
-                    var previousToken = yasqe.getPreviousNonWsToken(cur.line, token);
-                    console.log(previousToken)
-                    // if (previousToken.type === null || previousToken.string === ".") {
-                    //     return true;
-                    // } else {
-                        return true;
-                    // }
+                    if (token.state.possibleCurrent.indexOf("a") >= 0) {
+                        state.position = "predicate"
+                    } else if (token.state.possibleCurrent.indexOf("OPTIONAL") >= 0){
+                        state.position = "subject";
+                    } else {
+                        state.position="object";
+                        state.predicate=token.state.lastProperty;
+                    }
+                    localThis.setState(state);
+                    return true;
                 },
                 preProcessToken: function (token) {
                     return token;
                 },
                 postProcessToken: function (token, suggestedString) {
-                    return tripleToPrefixed( suggestedString );
+                    return iriToPrefixed( suggestedString );
                 }
             };
             const yq = yasqe;
@@ -76,17 +93,31 @@ class Yasqe extends Component {
             returnObj.autoShow = false;
             returnObj.get = function (token, callback) {
                 console.log("GETTING ")
-                Ajax.get(Constants.SERVER+"/rest/suggest/suggest-tpc",params({
+                // Ajax.get(Constants.SERVER+"/rest/suggest/suggest-tpc",params({
+                //         lastValidQuery:localThis.state.lastParsableQuery,
+                //         currentQuery:yq.getValue(),
+                //         currentQueryCursor:yq.getCursor()
+                //     })
+                Ajax.get(Constants.SERVER+"/rest/suggest/suggest-terms",params({
                         lastValidQuery:localThis.state.lastParsableQuery,
                         currentQuery:yq.getValue(),
-                        currentQueryCursor:yq.getCursor()
-                })
+                        currentQueryCursor:yq.getCursor(),
+                        position : localThis.state.position,
+                        predicate : prefixedToIri(localThis.state.predicate)
+                    })
                 ).then((data) => {
                     callback(data.map(d => d.value));
                 });
             };
             return returnObj;
         };
+
+        // predpoklad - dotaz je rozbity jen v aktualnim triplu
+        // subject
+        // property
+        // object
+        // idealne i zbytek nevalidniho triplu
+
         YASQE.registerAutocompleter('queryIndexCompleter', queryIndexCompleter);
 
         //And, to make sure we don't use the other property and class autocompleters, overwrite the default enabled completers
